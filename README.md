@@ -1,5 +1,13 @@
 # Gesture-controlled IoT nightlight with ESP8266WiFi
 
+
+## Hardware
+
+* NodeMcu V3 Wifi module (ESP8266)
+* VL53L0X Time-of-Flight (ToF) Laser Ranging Sensor
+* WS2812B LED strip
+
+
 ## Features
 
 * LED color can be set on the web interface
@@ -18,12 +26,6 @@ and does not support swiping or mouse dragging, so this is not a problem.
 
 Using a HC-SR04 ultrasound distance sensor module has proven to be problematic, especially in confined environments,
 where multiple reflections can occur. The VL53L0X laser sensor has shown a much better performance.
-
-## Hardware
-
-* NodeMcu V3 Wifi module (ESP8266)
-* VL53L0X Time-of-Flight (ToF) Laser Ranging Sensor
-* WS2812B LED strip
 
 ## References
 
