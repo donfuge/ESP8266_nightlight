@@ -10,8 +10,8 @@
 
 ## Features
 
-* LED color can be set on the web interface
-* Brightness is controlled by holding your hand above the distance sensor. Increasing/decreasing
+* LED color and light intensity can be set on the web interface
+* Light intensity  can be also controlled by holding your hand above the distance sensor. Increasing/decreasing
 the distance increases/decreases the brightness. Removing your hand fixes the brightness.
 
 
@@ -29,7 +29,7 @@ where multiple reflections can occur. The VL53L0X laser sensor has shown a much 
 
 ## References
 
-Color wheel, basic web server code:
+Color wheel, basic web server code (extended with intensity control):
 
 https://github.com/jmbussat/WS2812_ESP8266
 
