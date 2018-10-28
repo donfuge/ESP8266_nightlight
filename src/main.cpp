@@ -29,6 +29,8 @@ struct {
 String form;
 
 VL53L0X sensor;
+#define VL53L0X_SDA 5
+#define VL53L0X_SCL 4
 
 // distance unit: cm
 #define MAX_DISTANCE 50.0
@@ -141,7 +143,7 @@ void setup() {
   FastLED.setBrightness(  0);
   FastLED.show();
 
-  Wire.begin(5, 4);
+  Wire.begin(VL53L0X_SDA, VL53L0X_SCL);
 
   sensor.init();
   sensor.setTimeout(500);

@@ -33,6 +33,10 @@ Color wheel, basic web server code (extended with intensity control):
 
 https://github.com/jmbussat/WS2812_ESP8266
 
+Useful code to find I2C devices empirically (with pin definitions):
+
+https://github.com/jainrk/i2c_port_address_scanner
+
 ## Libraries used
 
 * FastLED
