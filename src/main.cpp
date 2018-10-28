@@ -18,16 +18,11 @@
 // Classic web server on port 80
 ESP8266WebServer server(80);
 
-
-
 uint color_addr = 0;
 
 struct {
   unsigned char red,green,blue;
 } rgb_data;
-
-
-
 
 String form;
 
@@ -167,20 +162,16 @@ float brightness;
 int mappedValue;
 
 void loop() {
-  delay(50);                     // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
-  //Serial.print("Ping: ");
+  delay(50);
   distance =  sensor.readRangeContinuousMillimeters()/10;
-  //Serial.println(distance); // Send ping, get distance in cm and print result (0 = outside set distance range)
-  //Serial.println("cm");
+  //Serial.println(distance);
 
     brightness= 100.0*(distance-MIN_DISTANCE)/(MAX_DISTANCE-MIN_DISTANCE);
 
 
   if (0 <= distance & distance <= MAX_DISTANCE)
    {
-  //mappedValue = map(distance, MIN_DISTANCE, MAX_DISTANCE, 0, 100)-1;
-  //brightness = max(0,brightness);
- // brightness = min(100,brightness);
+
 
 FastLED.setBrightness(constrain(brightness, 0, 100));
   FastLED.show();
