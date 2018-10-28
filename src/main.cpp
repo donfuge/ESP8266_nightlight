@@ -5,14 +5,16 @@
 #include <ESP8266WebServer.h>
 #include "html_header.h"
 #include <EEPROM.h>
+#include <SPI.h>
+#include <Wire.h>
 
 #define EXT_CONFIG_SSID_PASS
 
 #ifdef EXT_CONFIG_SSID_PASS
-  #include <config.h> // wifi SSID and password
+#include <config.h> // wifi SSID and password
 #else
-  const char* password = "xxx";
-  const char* ssid     = "xxx";
+const char* password = "xxx";
+const char* ssid     = "xxx";
 #endif
 
 // Classic web server on port 80
@@ -28,6 +30,7 @@ String form;
 
 VL53L0X sensor;
 
+// distance unit: cm
 #define MAX_DISTANCE 50.0
 #define MIN_DISTANCE 10.0
 
@@ -37,16 +40,14 @@ VL53L0X sensor;
 #define LED_TYPE    WS2811
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
+TBlendType    currentBlending;
 
 #define UPDATES_PER_SECOND 100
 #define MIN_LIT_SEC 20
 
-#include <SPI.h>
-#include <Wire.h>
-
-int strip_lit = false;
-
-TBlendType    currentBlending;
+float distance;
+float brightness;
+int mappedValue;
 
 // Root handler: basic web page with link to settings page
 void handle_root() {
@@ -79,11 +80,11 @@ void handle_outputs() {
   server.send(200, "text/html", form);
 
   for( int i = 0; i < NUM_LEDS; i++) {
-      leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
+    leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
   }
-    FastLED.show();
+  FastLED.show();
 
-    Serial.println("RGB values updated: "+String(rgb_data.red)+","+String(rgb_data.green)+","+String(rgb_data.blue));
+  Serial.println("RGB values updated: "+String(rgb_data.red)+","+String(rgb_data.green)+","+String(rgb_data.blue));
 
   // replace values in EEPROM
   EEPROM.put(color_addr,rgb_data);
@@ -94,89 +95,83 @@ void handle_outputs() {
 
 void setup() {
 
+  // read out LED colors from the EEPROM
 
-EEPROM.begin(512);
+  EEPROM.begin(512);
+  EEPROM.get(color_addr,rgb_data);
 
-EEPROM.get(color_addr,rgb_data);
+  Serial.begin(115200);
+  Serial.println("RGB values loaded from EEPROM: "+String(rgb_data.red)+","+String(rgb_data.green)+","+String(rgb_data.blue));
 
- Serial.begin(115200);
+  // connect to WiFi AP
+  Serial.print("Connecting to ");
+  Serial.print(ssid);
 
- Serial.println("RGB values loaded from EEPROM: "+String(rgb_data.red)+","+String(rgb_data.green)+","+String(rgb_data.blue));
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
 
- Serial.print("Connecting to ");
- Serial.print(ssid);
- WiFi.begin(ssid, password);
- while (WiFi.status() != WL_CONNECTED) {
-     delay(1000);
-     Serial.print(".");
- }
+  Serial.print(WiFi.status());
 
- Serial.print(WiFi.status());
+  Serial.println("");
 
- Serial.println("");
+  Serial.print("Connected, IP address: ");
+  Serial.println(WiFi.localIP());
 
- Serial.print("Connected, IP address: ");
-Serial.println(WiFi.localIP());
+  // Attach handles to web server
+  // Base page
+  server.on("/", handle_root);
+  // Setting page
+  server.on("/out", handle_outputs);
+  // Start web server
+  server.begin();
 
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  FastLED.setBrightness(  BRIGHTNESS );
 
- // Attach handles to web server
-// Base page
-server.on("/", handle_root);
-// Setting page
-server.on("/out", handle_outputs);
-// Start web server
-server.begin();
+  currentBlending = LINEARBLEND;
 
+  for( int i = 0; i < NUM_LEDS; i++) {
+    leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
+  }
 
-    FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-    FastLED.setBrightness(  BRIGHTNESS );
+  FastLED.setBrightness(  0);
+  FastLED.show();
 
-    currentBlending = LINEARBLEND;
+  Wire.begin(5, 4);
 
-    for( int i = 0; i < NUM_LEDS; i++) {
-        leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
-    }
+  sensor.init();
+  sensor.setTimeout(500);
 
-        FastLED.setBrightness(  0);
-        FastLED.show();
-
-        Wire.begin(5, 4);
-
-        sensor.init();
-        sensor.setTimeout(500);
-
-        // Start continuous back-to-back mode (take readings as
-        // fast as possible).  To use continuous timed mode
-        // instead, provide a desired inter-measurement period in
-        // ms (e.g. sensor.startContinuous(100)).
-        sensor.startContinuous();
-
-
-        // Def
+  // Start continuous back-to-back mode (take readings as
+  // fast as possible).  To use continuous timed mode
+  // instead, provide a desired inter-measurement period in
+  // ms (e.g. sensor.startContinuous(100)).
+  sensor.startContinuous();
 
 }
 
 
-float distance;
-float brightness;
-int mappedValue;
+
 
 void loop() {
   delay(50);
   distance =  sensor.readRangeContinuousMillimeters()/10;
   //Serial.println(distance);
 
-    brightness= 100.0*(distance-MIN_DISTANCE)/(MAX_DISTANCE-MIN_DISTANCE);
+  brightness= 100.0*(distance-MIN_DISTANCE)/(MAX_DISTANCE-MIN_DISTANCE);
 
 
-  if (0 <= distance & distance <= MAX_DISTANCE)
-   {
+  if ( (0 <= distance) & (distance <= MAX_DISTANCE))
+  {
 
 
-FastLED.setBrightness(constrain(brightness, 0, 100));
-  FastLED.show();
-   }
+    FastLED.setBrightness(constrain(brightness, 0, 100));
+    FastLED.show();
+  }
 
-   // Process clients requests
-   server.handleClient();
+  // Process clients requests
+  server.handleClient();
 }
