@@ -67,6 +67,8 @@ void handle_outputs() {
   GMsg=server.arg("G");
   BMsg=server.arg("B");
 
+  brightness= server.arg("intensity").toInt();
+
   // Convert to number to pass to Neopixel library
   rgb_data.red=RMsg.toInt();
   rgb_data.green=GMsg.toInt();
@@ -82,6 +84,7 @@ void handle_outputs() {
   for( int i = 0; i < NUM_LEDS; i++) {
     leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
   }
+  FastLED.setBrightness(brightness);
   FastLED.show();
 
   Serial.println("RGB values updated: "+String(rgb_data.red)+","+String(rgb_data.green)+","+String(rgb_data.blue));
@@ -89,8 +92,6 @@ void handle_outputs() {
   // replace values in EEPROM
   EEPROM.put(color_addr,rgb_data);
   EEPROM.commit();
-
-
 }
 
 void setup() {
@@ -153,16 +154,12 @@ void setup() {
 
 }
 
-
-
-
 void loop() {
   delay(50);
   distance =  sensor.readRangeContinuousMillimeters()/10;
   //Serial.println(distance);
 
   brightness= 100.0*(distance-MIN_DISTANCE)/(MAX_DISTANCE-MIN_DISTANCE);
-
 
   if ( (0 <= distance) & (distance <= MAX_DISTANCE))
   {
