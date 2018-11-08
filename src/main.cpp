@@ -7,6 +7,7 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include <Wire.h>
+#include <time.h>
 
 #define EXT_CONFIG_SSID_PASS
 
@@ -36,7 +37,7 @@ VL53L0X sensor;
 #define MAX_DISTANCE 50.0
 #define MIN_DISTANCE 10.0
 
-#define LED_PIN     4
+#define LED_PIN     4 // RGB strip
 #define NUM_LEDS    26
 #define BRIGHTNESS  100
 #define LED_TYPE    WS2811
@@ -51,9 +52,27 @@ float distance;
 float brightness;
 int mappedValue;
 
+// time
+// https://github.com/scanlime/esp8266-Arduino/blob/master/tests/Time/Time.ino
+
+int timezone = 2;
+int dst = 0;
+char server_response[100];
+char timestr[20];
+
+time_t get_time()
+{
+  return  time(nullptr) - timezone * 60 * 60;
+}
 // Root handler: basic web page with link to settings page
 void handle_root() {
-  server.send(200, "text/html", "<html>WS2812 WiFi <a href='./out'>Control</a></html>");
+  strcpy(server_response, "<html>WS2812 WiFi <a href='./out'>Control</a></html><p>");
+  time_t now = get_time();
+  strftime(timestr, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+  strcat(server_response,timestr);
+
+
+  server.send(200, "text/html", server_response);
   delay(100);
 }
 
@@ -123,6 +142,19 @@ void setup() {
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
 
+// get the time for a time server
+  configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    Serial.print("\nWaiting for time");
+    while (!time(nullptr)) {
+      Serial.print(".");
+      delay(1000);
+    }
+    Serial.println("");
+    Serial.println("Time set:");
+
+    time_t now = get_time();
+    strftime(timestr, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+    Serial.println(timestr);
   // Attach handles to web server
   // Base page
   server.on("/", handle_root);
@@ -140,8 +172,14 @@ void setup() {
     leds[i].setRGB( rgb_data.red, rgb_data.green, rgb_data.blue);
   }
 
-  FastLED.setBrightness(  0);
+  FastLED.setBrightness(0);
   FastLED.show();
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);   // turn off built-in LED
+
+  pinMode(D0, OUTPUT);
+  digitalWrite(D0, HIGH);   // turn off built-in LED
 
   Wire.begin(VL53L0X_SDA, VL53L0X_SCL);
 
@@ -165,12 +203,11 @@ void loop() {
 
   if ( (0 <= distance) & (distance <= MAX_DISTANCE))
   {
-
-
     FastLED.setBrightness(constrain(brightness, 0, 100));
     FastLED.show();
   }
 
   // Process clients requests
   server.handleClient();
+
 }
