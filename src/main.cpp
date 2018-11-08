@@ -55,10 +55,21 @@ int mappedValue;
 // time
 // https://github.com/scanlime/esp8266-Arduino/blob/master/tests/Time/Time.ino
 
+#define NORMAL_MODE 0
+#define ALARM_MODE 1
+
 int timezone = 2;
 int dst = 0;
 char server_response[100];
 char timestr[20];
+struct tm * timeinfo;
+
+int alarm_hour = 7;
+int alarm_mins = 30;
+int alarm_holdoff = 60; // sec
+int mode = NORMAL_MODE;
+
+time_t holdoff_time;
 
 time_t get_time()
 {
@@ -155,6 +166,9 @@ void setup() {
     time_t now = get_time();
     strftime(timestr, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
     Serial.println(timestr);
+
+    holdoff_time = now;
+
   // Attach handles to web server
   // Base page
   server.on("/", handle_root);
@@ -194,8 +208,8 @@ void setup() {
 
 }
 
-void loop() {
-  delay(50);
+void update_light_intensity()
+{
   distance =  sensor.readRangeContinuousMillimeters()/10;
   //Serial.println(distance);
 
@@ -206,6 +220,47 @@ void loop() {
     FastLED.setBrightness(constrain(brightness, 0, 100));
     FastLED.show();
   }
+
+}
+
+void ramp_up()
+{
+  for (int i=0;i<=100;i++)
+  {
+    brightness= i;
+
+    FastLED.setBrightness(constrain(brightness, 0, 100));
+    FastLED.show();
+
+    delay(100);
+  }
+}
+
+void loop() {
+  delay(50);
+
+  time_t now = get_time();
+
+
+  int hour  = (now / 3600) % 24;
+  int min  = (now / 60) % 60;
+
+  if (now > holdoff_time && hour == alarm_hour && min == alarm_mins)
+  {
+    mode = ALARM_MODE;
+  }
+
+  if (mode == NORMAL_MODE)
+  {
+    update_light_intensity();
+  }
+  else if (mode == ALARM_MODE)
+  {
+    ramp_up();
+    mode = NORMAL_MODE;
+    holdoff_time = now + alarm_holdoff;
+  }
+
 
   // Process clients requests
   server.handleClient();
